@@ -1,23 +1,13 @@
 import scrapy
 from scrapy.http import Response
-import re
 
 from scrape_books.scrape_books.items import ScrapeBooksItem
-
-rating_dict = {
-            "Zero": 0,
-            "One": 1,
-            "Two": 2,
-            "Three": 3,
-            "Four": 4,
-            "Five": 5,
-        }
 
 
 class BooksSpider(scrapy.Spider):
     name = "books"
     allowed_domains = ["books.toscrape.com"]
-    start_urls = ["https://books.toscrape.com"]
+    start_urls = ["https://books.toscrape.com/"]
 
     def parse(self, response: Response, **kwargs):
         for href in response.css("article.product_pod h3 a::attr(href)").getall():
@@ -27,22 +17,15 @@ class BooksSpider(scrapy.Spider):
         if next_page:
             yield response.follow(next_page, callback=self.parse)
 
-
-    def parse_book(self, response: Response, **kwargs):
+    def parse_book(self,response: Response, **kwargs):
         item = ScrapeBooksItem()
 
-        item["title"] = response.css("h1::text").get()
+        item["title"] = response.css(".product_main h1::text").get()
         item["price"] = response.css(".price_color::text").get()
-        instock = response.css(".instock.availability::text").get()
-        instock = re.search(r"(\d+)", instock)
-        item["amount_in_stock"] = instock
-        rating = response.css(".star-rating::attr(class)").get()
-        rating = rating.split()[-1]
-        item["rating"] = rating_dict.get(rating)
-        item["category"] = response.css("ul.breadcrum li:nth-last-child(2)::text").get()
-        item["description"] = response.xpath(
-            "//div[@id='product_describtion']/following-sibling::p/text()"
-        ).get()
-        item["upc"] = response.css("table tr:first-child td:first-child::text").get()
+        item["amount_in_stock"] = response.css(".availability::text").re_first(r"\d+")
+        item["rating"] = response.css(".star-rating::attr(class)").re_first(r"star-rating (\w+)")
+        item["category"] = response.css(".breadcrumb li:nth-child(3) a::text").get()
+        item["description"] = response.css("#product_description ~ p::text").get(default="").strip()
+        item["upc"] = response.css("th:contains('UPC') + td::text").get()
 
         yield item
