@@ -85,3 +85,5 @@ ITEM_PIPELINES = {
 
 # Set settings whose default value is deprecated to a future-proof value
 FEED_EXPORT_ENCODING = "utf-8"
+FEED_URI = 'books.jl'
+FEED_FORMAT = 'jsonlines'
